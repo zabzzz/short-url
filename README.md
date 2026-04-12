@@ -1,1 +1,1 @@
-This is a project demonstrating my understaindg of software development as a field through a project making a URL shortener.
+This is a project demonstrating my understanding of software development as a field through a project making a URL shortener.
