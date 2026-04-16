@@ -1,0 +1,27 @@
+{
+  "name": "short-url",
+  "version": "1.0.0",
+  "description": "This is a project demonstrating my understanding of software development as a field through a project making a URL shortener.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zabzzz/short-url.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/zabzzz/short-url/issues"
+  },
+  "homepage": "https://github.com/zabzzz/short-url#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "nodemon": "^3.1.14"
+  }
+}
