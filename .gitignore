@@ -1,0 +1,16 @@
+# dependancies
+node_modules/
+short/node_modules/
+
+# env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# build outputs
+dist/
+short/dist/
+build/
+.vercel/
