@@ -7,7 +7,7 @@ const app = express();
 // Set the port that you want the server to run on
 const PORT = process.env.PORT || 3000; // Changed to 3000 for MacOS since 5000 is taken by AirPlay
 
-//creates an endpoint for the route /api
+// creates an endpoint for the route /api
 app.get('/api', (req, res) => {
   res.json({ message: 'Hello from ExpressJS' });
 });
@@ -16,5 +16,13 @@ app.get('/api', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server listening on ${PORT}`);
 });
+
+// makes running locally possible
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = 3001;
+  app.listen(PORT, () => {
+    console.log(`Local server: http://localhost:${PORT}`);
+  });
+}
 
 export default app;
