@@ -3,6 +3,6 @@
     "outputDirectory": "short/dist",
     "rewrites": [
         { "source": "/api/:path*", "destination": "/api/index.js" },
-        { "source": "/(.*)", "destination": "/index.html" }
+        { "source": "/:code", "destination": "/api/index.js" }
     ]
 }
