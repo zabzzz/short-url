@@ -10,8 +10,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const shortUrl = shortCode ? `zabzshort.com/${shortCode}` : null;
-  const fullShortUrl = shortCode ? `https://zabzshort.com/${shortCode}` : null;
+  const shortUrl = shortCode ? `short-url-xxxx.vercel.app/${shortCode}` : null;
+  const fullShortUrl = shortCode ? `https://short-url-xxxx.vercel.app/${shortCode}` : null; 
 
   async function handleShorten() {
     setError(null);
