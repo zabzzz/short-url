@@ -1,5 +1,5 @@
 {
-    "buildCommand": "cd short && npm install && npm run dev",
+    "buildCommand": "cd short && npm install && npm run build",
     "outputDirectory": "short/dist",
     "rewrites": [
         { "source": "/api/:path*", "destination": "/api/index.js" },
