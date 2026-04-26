@@ -5,16 +5,15 @@ const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 export default function App() {
   const [page, setPage] = useState("home");
-  const [authed, setAuthed] = useState(false);
+  const [token, setToken] = useState(null);
   const [selectedCode, setSelectedCode] = useState(null);
 
-  if (page === "login") return <Login onSuccess={() => { setAuthed(true); setPage("dashboard"); }} />;
-  if (page === "dashboard" && authed) return (
-    <Dashboard
-      selectedCode={selectedCode}
-      onSelectCode={setSelectedCode}
-      onLogout={() => { setAuthed(false); setPage("home"); setSelectedCode(null); }}
-    />
+  function handleLogin(t) { setToken(t); setPage("dashboard"); }
+  function handleLogout() { setToken(null); setPage("home"); setSelectedCode(null); }
+
+  if (page === "login") return <Login onSuccess={handleLogin} />;
+  if (page === "dashboard" && token) return (
+    <Dashboard token={token} selectedCode={selectedCode} onSelectCode={setSelectedCode} onLogout={handleLogout} />
   );
   return <Shortener onAdminClick={() => setPage("login")} />;
 }
@@ -60,8 +59,10 @@ function Login({ onSuccess }) {
   const [pass, setPass] = useState("");
   const [error, setError] = useState(false);
 
-  function login() {
-    if (user === "sovamain" && pass === "zabz123") onSuccess();
+  async function login() {
+    const res = await fetch(`${API}/admin/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user, pass }) });
+    const data = await res.json();
+    if (data.token) onSuccess(data.token);
     else setError(true);
   }
 
@@ -77,20 +78,24 @@ function Login({ onSuccess }) {
   );
 }
 
-function Dashboard({ selectedCode, onSelectCode, onLogout }) {
+function Dashboard({ token, selectedCode, onSelectCode, onLogout }) {
   return selectedCode
-    ? <LinkStats code={selectedCode} onBack={() => onSelectCode(null)} onLogout={onLogout} />
-    : <LinkList onSelectCode={onSelectCode} onLogout={onLogout} />;
+    ? <LinkStats token={token} code={selectedCode} onBack={() => onSelectCode(null)} onLogout={onLogout} />
+    : <LinkList token={token} onSelectCode={onSelectCode} onLogout={onLogout} />;
 }
 
-function LinkList({ onSelectCode, onLogout }) {
+function authFetch(url, token) {
+  return fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
+}
+
+function LinkList({ token, onSelectCode, onLogout }) {
   const [links, setLinks] = useState([]);
   const [global, setGlobal] = useState(null);
 
   useEffect(() => {
-    fetch(`${API}/admin/links`).then(r => r.json()).then(setLinks);
-    fetch(`${API}/admin/global`).then(r => r.json()).then(setGlobal);
-  }, []);
+    authFetch(`${API}/admin/links`, token).then(setLinks);
+    authFetch(`${API}/admin/global`, token).then(setGlobal);
+  }, [token]);
 
   return (
     <main className="wide">
@@ -101,9 +106,7 @@ function LinkList({ onSelectCode, onLogout }) {
 
       <p className="admin-title">All Links</p>
       <table>
-        <thead>
-          <tr><th>Code</th><th>Original URL</th><th>Clicks</th></tr>
-        </thead>
+        <thead><tr><th>Code</th><th>Original URL</th><th>Clicks</th></tr></thead>
         <tbody>
           {links.map(l => (
             <tr key={l.code} className="clickable" onClick={() => onSelectCode(l.code)}>
@@ -130,12 +133,12 @@ function LinkList({ onSelectCode, onLogout }) {
   );
 }
 
-function LinkStats({ code, onBack, onLogout }) {
+function LinkStats({ token, code, onBack, onLogout }) {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    fetch(`${API}/admin/links/${code}`).then(r => r.json()).then(setStats);
-  }, [code]);
+    authFetch(`${API}/admin/links/${code}`, token).then(setStats);
+  }, [code, token]);
 
   if (!stats) return <main><p>Loading…</p></main>;
 
@@ -145,13 +148,11 @@ function LinkStats({ code, onBack, onLogout }) {
         <button onClick={onBack}>← Back</button>
         <button onClick={onLogout}>Logout</button>
       </div>
-
       <div className="stat-header">
         <p className="admin-title">{stats.code}</p>
         <p className="url-muted">{stats.url}</p>
         <p>Total clicks: <strong>{stats.totalClicks}</strong></p>
       </div>
-
       <div className="tables-row">
         <StatTable title="Clicks per Day" data={stats.perDay} />
         <StatTable title="Referrers" data={stats.referrers} />

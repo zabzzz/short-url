@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { nanoid } from "nanoid";
 import admin from "firebase-admin";
+import jwt from "jsonwebtoken";
 
 admin.initializeApp({
   credential: admin.credential.cert(
@@ -18,7 +19,18 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// auth check
+
+function requireAuth(req, res, next) {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Unauthorized." });
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid or expired token." });
+  }
+}
 
 function parseUserAgent(ua = "") {
   const device = /mobile/i.test(ua) ? "Mobile" : "Desktop";
@@ -66,20 +78,26 @@ async function logClick(code, req) {
   });
 }
 
-// ── Routes ─────────────────────────────────────────────────────────────────
+app.post("/admin/login", (req, res) => {
+  const { user, pass } = req.body;
+  if (user !== process.env.ADMIN_USER || pass !== process.env.ADMIN_PASS)
+    return res.status(401).json({ error: "Invalid credentials." });
+  const token = jwt.sign({ user }, process.env.JWT_SECRET, { expiresIn: "8h" });
+  res.json({ token });
+});
 
 app.post("/shorten", async (req, res) => {
   const code = await saveUrl(req.body.url.trim());
   res.json({ short: code });
 });
 
-app.get("/admin/global", async (req, res) => {
+app.get("/admin/global", requireAuth, async (req, res) => {
   const snap = await clicks.get();
   const data = snap.docs.map(d => d.data());
   res.json({ totalClicks: data.length, ...aggregateClicks(data) });
 });
 
-app.get("/admin/links", async (req, res) => {
+app.get("/admin/links", requireAuth, async (req, res) => {
   const snap = await urls.get();
   const links = await Promise.all(snap.docs.map(async doc => {
     const clickSnap = await clicks.where("code", "==", doc.id).get();
@@ -88,7 +106,7 @@ app.get("/admin/links", async (req, res) => {
   res.json(links);
 });
 
-app.get("/admin/links/:code", async (req, res) => {
+app.get("/admin/links/:code", requireAuth, async (req, res) => {
   const { code } = req.params;
   const urlDoc = await urls.doc(code).get();
   const clickSnap = await clicks.where("code", "==", code).get();
