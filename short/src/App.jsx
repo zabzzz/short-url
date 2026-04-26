@@ -1,50 +1,39 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 export default function App() {
-  const [input, setInput] = useState("");
-  const [shortCode, setShortCode] = useState(null);
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState("home");
+  const [authed, setAuthed] = useState(false);
+  const [selectedCode, setSelectedCode] = useState(null);
+
+  if (page === "login") return <Login onSuccess={() => { setAuthed(true); setPage("dashboard"); }} />;
+  if (page === "dashboard" && authed) return (
+    <Dashboard
+      selectedCode={selectedCode}
+      onSelectCode={setSelectedCode}
+      onLogout={() => { setAuthed(false); setPage("home"); setSelectedCode(null); }}
+    />
+  );
+  return <Shortener onAdminClick={() => setPage("login")} />;
+}
+
+function Shortener({ onAdminClick }) {
+  const [url, setUrl] = useState("");
+  const [code, setCode] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const shortUrl = shortCode ? `z-short.vercel.app/${shortCode}` : null;
-  const fullShortUrl = shortCode ? `https://z-short.vercel.app/${shortCode}` : null;
-
-  async function handleShorten() {
-    setError(null);
-    setShortCode(null);
-    setCopied(false);
-
-    const trimmed = input.trim();
-    if (!trimmed) return;
-
-    const withProtocol =
-      trimmed.startsWith("http://") || trimmed.startsWith("https://")
-        ? trimmed
-        : `https://${trimmed}`;
-
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/shorten`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: withProtocol }),
-      });
-      const data = await res.json();
-      if (!res.ok) setError(data.error || "Something went wrong.");
-      else { setShortCode(data.short); setInput(""); }
-    } catch {
-      setError("Could not reach the server.");
-    } finally {
-      setLoading(false);
-    }
+  async function shorten() {
+    if (!url.trim()) return;
+    const input = url.startsWith("http") ? url : `https://${url}`;
+    const res = await fetch(`${API}/shorten`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: input }) });
+    const data = await res.json();
+    if (data.short) { setCode(data.short); setUrl(""); }
   }
 
-  async function handleCopy() {
-    await navigator.clipboard.writeText(fullShortUrl);
+  async function copy() {
+    await navigator.clipboard.writeText(`https://z-short.vercel.app/${code}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -52,28 +41,124 @@ export default function App() {
   return (
     <main>
       <div className="row">
-        <input
-          type="text"
-          placeholder="Paste a URL…"
-          value={input}
-          onChange={(e) => { setInput(e.target.value); setError(null); }}
-          onKeyDown={(e) => e.key === "Enter" && handleShorten()}
-          disabled={loading}
-          className={error ? "err" : ""}
-        />
-        <button onClick={handleShorten} disabled={loading}>
-          {loading ? "…" : "Shorten"}
-        </button>
+        <input placeholder="Paste a URL…" value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === "Enter" && shorten()} />
+        <button onClick={shorten}>Shorten</button>
       </div>
-
-      {error && <p className="error">{error}</p>}
-
-      {shortUrl && (
+      {code && (
         <div className="result">
-          <span>{shortUrl}</span>
-          <button onClick={handleCopy}>{copied ? "Copied!" : "Copy"}</button>
+          <span>z-short.vercel.app/{code}</span>
+          <button onClick={copy}>{copied ? "Copied!" : "Copy"}</button>
         </div>
       )}
+      <p className="admin-link" onClick={onAdminClick}>Admin</p>
     </main>
+  );
+}
+
+function Login({ onSuccess }) {
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+  const [error, setError] = useState(false);
+
+  function login() {
+    if (user === "sovamain" && pass === "zabz123") onSuccess();
+    else setError(true);
+  }
+
+  return (
+    <main>
+      <div className="col">
+        <input placeholder="Username" value={user} onChange={e => { setUser(e.target.value); setError(false); }} />
+        <input placeholder="Password" type="password" value={pass} onChange={e => { setPass(e.target.value); setError(false); }} onKeyDown={e => e.key === "Enter" && login()} />
+        <button onClick={login}>Login</button>
+        {error && <p className="error">Invalid credentials.</p>}
+      </div>
+    </main>
+  );
+}
+
+function Dashboard({ selectedCode, onSelectCode, onLogout }) {
+  return selectedCode
+    ? <LinkStats code={selectedCode} onBack={() => onSelectCode(null)} onLogout={onLogout} />
+    : <LinkList onSelectCode={onSelectCode} onLogout={onLogout} />;
+}
+
+function LinkList({ onSelectCode, onLogout }) {
+  const [links, setLinks] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API}/admin/links`).then(r => r.json()).then(setLinks);
+  }, []);
+
+  return (
+    <main className="wide">
+      <div className="row">
+        <span className="admin-title">All Links</span>
+        <button onClick={onLogout}>Logout</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Code</th><th>Original URL</th><th>Clicks</th></tr>
+        </thead>
+        <tbody>
+          {links.map(l => (
+            <tr key={l.code} className="clickable" onClick={() => onSelectCode(l.code)}>
+              <td>{l.code}</td>
+              <td className="url-cell">{l.url}</td>
+              <td>{l.totalClicks}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </main>
+  );
+}
+
+function LinkStats({ code, onBack, onLogout }) {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API}/admin/links/${code}`).then(r => r.json()).then(setStats);
+  }, [code]);
+
+  if (!stats) return <main><p>Loading…</p></main>;
+
+  return (
+    <main className="wide">
+      <div className="row">
+        <button onClick={onBack}>← Back</button>
+        <button onClick={onLogout}>Logout</button>
+      </div>
+
+      <div className="stat-header">
+        <p className="admin-title">{stats.code}</p>
+        <p className="url-muted">{stats.url}</p>
+        <p>Total clicks: <strong>{stats.totalClicks}</strong></p>
+      </div>
+
+      <div className="tables-row">
+        <StatTable title="Clicks per Day" data={stats.perDay} />
+        <StatTable title="Referrers" data={stats.referrers} />
+        <StatTable title="Devices" data={stats.devices} />
+        <StatTable title="Browsers" data={stats.browsers} />
+      </div>
+    </main>
+  );
+}
+
+function StatTable({ title, data }) {
+  const rows = Object.entries(data).sort((a, b) => b[1] - a[1]);
+  return (
+    <div className="stat-table">
+      <p className="admin-title">{title}</p>
+      <table>
+        <tbody>
+          {rows.length === 0
+            ? <tr><td colSpan={2}>No data</td></tr>
+            : rows.map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)
+          }
+        </tbody>
+      </table>
+    </div>
   );
 }

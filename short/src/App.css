@@ -19,8 +19,17 @@ main {
   gap: 0.6rem;
 }
 
+main.wide { max-width: 800px; }
+
 .row {
   display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
   gap: 0.4rem;
 }
 
@@ -34,7 +43,6 @@ input {
 }
 
 input:focus { border-color: #555; }
-input.err   { border-color: #e44; }
 
 button {
   padding: 0.55rem 1rem;
@@ -71,3 +79,57 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 
 .error { font-size: 0.82rem; color: #e44; }
+
+.admin-link {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #aaa;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.admin-link:hover { color: #555; }
+
+.admin-title { font-weight: 600; font-size: 0.95rem; }
+
+.url-muted { font-size: 0.8rem; color: #777; word-break: break-all; }
+
+.stat-header { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.tables-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.stat-table { display: flex; flex-direction: column; gap: 0.4rem; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+  font-size: 0.85rem;
+}
+
+th, td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th { background: #f9f9f9; font-weight: 600; }
+
+tr:last-child td { border-bottom: none; }
+
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: #f5f5f5; }
+
+.url-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
