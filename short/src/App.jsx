@@ -85,17 +85,21 @@ function Dashboard({ selectedCode, onSelectCode, onLogout }) {
 
 function LinkList({ onSelectCode, onLogout }) {
   const [links, setLinks] = useState([]);
+  const [global, setGlobal] = useState(null);
 
   useEffect(() => {
     fetch(`${API}/admin/links`).then(r => r.json()).then(setLinks);
+    fetch(`${API}/admin/global`).then(r => r.json()).then(setGlobal);
   }, []);
 
   return (
     <main className="wide">
       <div className="row">
-        <span className="admin-title">All Links</span>
+        <span className="admin-title">Dashboard</span>
         <button onClick={onLogout}>Logout</button>
       </div>
+
+      <p className="admin-title">All Links</p>
       <table>
         <thead>
           <tr><th>Code</th><th>Original URL</th><th>Clicks</th></tr>
@@ -110,6 +114,18 @@ function LinkList({ onSelectCode, onLogout }) {
           ))}
         </tbody>
       </table>
+
+      {global && (
+        <>
+          <p className="admin-title">Global Stats</p>
+          <div className="tables-row">
+            <StatTable title="Clicks per Day" data={global.perDay} />
+            <StatTable title="Top Referrers" data={global.referrers} />
+            <StatTable title="Devices" data={global.devices} />
+            <StatTable title="Browsers" data={global.browsers} />
+          </div>
+        </>
+      )}
     </main>
   );
 }

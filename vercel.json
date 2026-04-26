@@ -6,4 +6,4 @@
       { "source": "/shorten", "destination": "/api/index.js" },
       { "source": "/:code", "destination": "/api/index.js" }
     ]
-  }
+}

@@ -18,6 +18,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// ── Helpers ────────────────────────────────────────────────────────────────
+
 function parseUserAgent(ua = "") {
   const device = /mobile/i.test(ua) ? "Mobile" : "Desktop";
   const browser =
@@ -26,6 +28,18 @@ function parseUserAgent(ua = "") {
     /firefox/i.test(ua) ? "Firefox" :
     /edg/i.test(ua) ? "Edge" : "Other";
   return { device, browser };
+}
+
+function aggregateClicks(clicksData) {
+  const perDay = {}, referrers = {}, devices = {}, browsers = {};
+  clicksData.forEach(c => {
+    const day = c.timestamp?.toDate().toISOString().slice(0, 10) ?? "unknown";
+    perDay[day] = (perDay[day] || 0) + 1;
+    referrers[c.referrer] = (referrers[c.referrer] || 0) + 1;
+    devices[c.device] = (devices[c.device] || 0) + 1;
+    browsers[c.browser] = (browsers[c.browser] || 0) + 1;
+  });
+  return { perDay, referrers, devices, browsers };
 }
 
 async function findExistingCode(url) {
@@ -52,11 +66,17 @@ async function logClick(code, req) {
   });
 }
 
-// ROUTES
+// ── Routes ─────────────────────────────────────────────────────────────────
 
 app.post("/shorten", async (req, res) => {
   const code = await saveUrl(req.body.url.trim());
   res.json({ short: code });
+});
+
+app.get("/admin/global", async (req, res) => {
+  const snap = await clicks.get();
+  const data = snap.docs.map(d => d.data());
+  res.json({ totalClicks: data.length, ...aggregateClicks(data) });
 });
 
 app.get("/admin/links", async (req, res) => {
@@ -72,43 +92,8 @@ app.get("/admin/links/:code", async (req, res) => {
   const { code } = req.params;
   const urlDoc = await urls.doc(code).get();
   const clickSnap = await clicks.where("code", "==", code).get();
-
   const clicksData = clickSnap.docs.map(d => d.data());
-
-  // clicks per day
-  const perDay = {};
-  clicksData.forEach(c => {
-    const day = c.timestamp?.toDate().toISOString().slice(0, 10) ?? "unknown";
-    perDay[day] = (perDay[day] || 0) + 1;
-  });
-
-  // top referrers
-  const referrers = {};
-  clicksData.forEach(c => {
-    referrers[c.referrer] = (referrers[c.referrer] || 0) + 1;
-  });
-
-  // device breakdown
-  const devices = {};
-  clicksData.forEach(c => {
-    devices[c.device] = (devices[c.device] || 0) + 1;
-  });
-
-  // browser breakdown
-  const browsers = {};
-  clicksData.forEach(c => {
-    browsers[c.browser] = (browsers[c.browser] || 0) + 1;
-  });
-
-  res.json({
-    code,
-    url: urlDoc.data().url,
-    totalClicks: clicksData.length,
-    perDay,
-    referrers,
-    devices,
-    browsers,
-  });
+  res.json({ code, url: urlDoc.data().url, totalClicks: clicksData.length, ...aggregateClicks(clicksData) });
 });
 
 app.get("/:code", async (req, res) => {
