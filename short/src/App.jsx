@@ -47,7 +47,7 @@ function Shortener({ onAdminClick }) {
       {code && (
         <div className="result">
           <span>z-short.vercel.app/{code}</span>
-          <button onClick={copy}>{copied ? "Copied!" : "Copy"}</button>
+          <button onClick={copy}>{copied ? "you did it hooray" : "Copy"}</button>
         </div>
       )}
       <p className="admin-link" onClick={onAdminClick}>Admin</p>
